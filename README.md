@@ -4,11 +4,12 @@ Demo scripts for getting started with LLMs and knowledge graphs/ontologies.
 
 ## what's in this repo
 
-This repository contains three demonstration scripts:
+This repository contains four demonstration scripts:
 
 1. **Vector Search (`1_vector_search.py`)** - Shows the limitations of vector search when dealing with complex, multi-hop reasoning or implicit relationships between documents
 2. **Ontology Schema (`2_ontologies_owl.py`)** - Demonstrates how LLMs can extract ontology schemas (classes, properties, relationships) from documents and generate formal OWL ontologies for use in Protégé
 3. **Knowledge Graph Instances (`3_ontologies_pydantic.py`)** - Shows how to extract concrete entities and their relationships to build a knowledge graph using Pydantic, with easy visualization options
+4. **Knowledge Graph Querying (`4_query_ontology.py`)** - Demonstrates how to query across multiple knowledge graphs to answer complex questions that vector search cannot handle, showing the superiority of structured knowledge representation for multi-hop reasoning
 
 These scripts illustrate why structured knowledge representation (ontologies and knowledge graphs) can complement vector search for knowledge-intensive tasks.
 
@@ -187,6 +188,59 @@ Method 2: Online visualization
 3. View the interactive graph visualization
 
 Method 3: Use the text visualization printed to the console during execution
+
+### 4. knowledge graph querying script (`4_query_ontology.py`)
+
+The script demonstrates how to query across multiple knowledge graphs to answer complex questions that vector search fails at. It builds a unified knowledge graph from all PDFs in `data/` and uses it to answer multi-hop, causal, and temporal questions.
+
+**What it does:**
+- Loads all PDF files from the `data/` directory
+- Extracts knowledge graphs from each using LLM (with caching for performance)
+- Merges knowledge graphs into a unified graph spanning all documents
+- Queries the graph using LLM with full structural context
+- Demonstrates superiority over vector search for complex reasoning tasks
+
+**Key advantages over vector search:**
+- Can traverse relationships between entities (multi-hop reasoning)
+- Links information across documents through shared entities
+- Understands causal chains by following relationship sequences
+- Handles temporal reasoning through time-based relationships
+- Provides structured context to the LLM for better reasoning
+
+**Usage:**
+
+1. Run the script with a default question:
+
+   ```bash
+   uv run python 4_query_ontology.py
+   ```
+
+   Or ask a specific question:
+
+   ```bash
+   uv run python 4_query_ontology.py "How did the N3 Building fire affect Kentucky Truck Plant inventory?"
+   ```
+
+2. Optional arguments:
+
+   ```bash
+   # Display the unified knowledge graph structure before querying
+   uv run python 4_query_ontology.py --show-graph "Your question here"
+
+   # Rebuild the knowledge graph cache from scratch
+   uv run python 4_query_ontology.py --rebuild-cache "Your question here"
+   ```
+
+3. The script automatically caches extracted knowledge graphs in `knowledge_graphs_cache/` for faster subsequent runs. Remove this directory to force re-extraction.
+
+**Example questions that work well:**
+- "How did the N3 Building fire affect Kentucky Truck Plant inventory?"
+- "What specific equipment failure in Ibaraki Prefecture led to supplier-related production constraints?"
+- "Why did the loss of 23 machines in a Japanese clean room cause a multi-billion dollar halt for F-150 production?"
+- "Do the Renesas fire updates align with Ford's quarterly production decreases?"
+
+**Why it works better than vector search:**
+This script can answer the complex questions listed in the "vector search failing questions" section below because it understands the _relationships_ between entities across documents, not just textual similarity.
 
 ### vector search failing questions (`1_vector_search.py`)
 

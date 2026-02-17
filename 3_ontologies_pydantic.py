@@ -152,7 +152,6 @@ Return a structured knowledge graph (entities and relationships)."""
 
 def extract_knowledge_graph_with_llm(
     text: str,
-    max_chars: int = 12000
 ) -> KnowledgeGraph:
     """
     Use an LLM to extract a knowledge graph from text.
@@ -162,16 +161,10 @@ def extract_knowledge_graph_with_llm(
 
     Args:
         text: The input text to analyze
-        max_chars: Maximum characters to send to LLM (prevents context overflow)
 
     Returns:
         KnowledgeGraph: The extracted knowledge graph with entities and relationships
     """
-    # Truncate text if needed to fit within LLM context limits
-    if len(text) > max_chars:
-        print(f"  Text truncated to {max_chars} characters for LLM processing")
-        text = text[:max_chars] + "\n\n[... truncated ...]"
-
     # Initialize the LLM with low temperature and bind structured output
     llm = get_llm(temperature=0.0)
     structured_llm = llm.with_structured_output(KnowledgeGraph)

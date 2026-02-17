@@ -15,6 +15,7 @@ from utils import get_embeddings, get_llm, load_pdfs_from_directory
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
 COLLECTION_NAME = "renesas_docs"
+DEFAULT_QUESTION = "How did the N3 Building fire affect Kentucky Truck Plant inventory?"
 
 # Gemini embedding model (stable)
 EMBEDDING_MODEL = "gemini-embedding-001"
@@ -116,11 +117,15 @@ def main():
     parser.add_argument(
         "question",
         nargs="?",
-        default="What is this document about?",
+        default=DEFAULT_QUESTION,
         help="Question to run vector search for",
     )
     parser.add_argument("-k", type=int, default=4, help="Number of chunks to return")
     args = parser.parse_args()
+
+    # Use default question when none provided (no positional argument or empty)
+    if not (args.question and args.question.strip()):
+        args.question = DEFAULT_QUESTION
 
     embeddings = get_embeddings(model=EMBEDDING_MODEL)
     vector_store = get_or_build_vector_store(embeddings)
