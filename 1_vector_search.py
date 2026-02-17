@@ -4,15 +4,13 @@ Demo: vectorize PDFs in data/, persist Chroma DB, run vector search with Gemini 
 Requires GOOGLE_API_KEY in the environment.
 """
 import argparse
-import os
 from pathlib import Path
 
-from dotenv import load_dotenv
 from langchain_chroma import Chroma
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_core.messages import HumanMessage, SystemMessage
+
+from utils import get_embeddings, get_llm, load_pdfs_from_directory
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
@@ -28,21 +26,6 @@ LLM_MODEL = "gemini-3-flash-preview"
 # 2. "Link plating equipment failure to Ford's supplier-related constraints."
 # 3. "Why did 23 machines lost cost billions in revenue?"
 
-# Load .env from project root (optional; env vars can also be set in the shell)
-load_dotenv()
-
-
-def get_embeddings() -> GoogleGenerativeAIEmbeddings:
-    if not os.environ.get("GOOGLE_API_KEY"):
-        raise SystemExit("Set GOOGLE_API_KEY in the environment.")
-    return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
-
-
-def get_llm() -> ChatGoogleGenerativeAI:
-    if not os.environ.get("GOOGLE_API_KEY"):
-        raise SystemExit("Set GOOGLE_API_KEY in the environment.")
-    return ChatGoogleGenerativeAI(model=LLM_MODEL, temperature=0)
-
 
 CONTEXT_ONLY_SYSTEM = """You must answer the user's question using ONLY the text from the "Retrieved documents" section below. Do not use your internal knowledge or any information outside these documents.
 
@@ -53,7 +36,7 @@ Rules:
 - You may summarize or rephrase only what is in the documents."""
 
 
-def answer_from_documents(question: str, documents: list, llm: ChatGoogleGenerativeAI) -> str:
+def answer_from_documents(question: str, documents: list, llm) -> str:
     """Formulate a response using only the retrieved document chunks."""
     context_parts = []
     for i, doc in enumerate(documents, 1):
@@ -81,19 +64,7 @@ def answer_from_documents(question: str, documents: list, llm: ChatGoogleGenerat
     return content if isinstance(content, str) else str(content)
 
 
-def load_pdfs(data_dir: Path):
-    """Load all PDFs from data_dir into a single list of documents."""
-    data_dir = data_dir.resolve()
-    if not data_dir.is_dir():
-        return []
-    docs = []
-    for path in sorted(data_dir.glob("*.pdf")):
-        loader = PyPDFLoader(str(path))
-        docs.extend(loader.load())
-    return docs
-
-
-def get_or_build_vector_store(embeddings: GoogleGenerativeAIEmbeddings) -> Chroma:
+def get_or_build_vector_store(embeddings) -> Chroma:
     """Load existing Chroma DB or build from PDFs in data/."""
     persist_path = PERSIST_DIR.resolve()
     persist_path.mkdir(parents=True, exist_ok=True)
@@ -112,7 +83,7 @@ def get_or_build_vector_store(embeddings: GoogleGenerativeAIEmbeddings) -> Chrom
         pass
 
     # Build from PDFs
-    raw_docs = load_pdfs(DATA_DIR)
+    raw_docs = load_pdfs_from_directory(DATA_DIR)
     if not raw_docs:
         raise SystemExit(
             f"No PDFs found in {DATA_DIR}. Add .pdf files there and run again."
@@ -151,9 +122,9 @@ def main():
     parser.add_argument("-k", type=int, default=4, help="Number of chunks to return")
     args = parser.parse_args()
 
-    embeddings = get_embeddings()
+    embeddings = get_embeddings(model=EMBEDDING_MODEL)
     vector_store = get_or_build_vector_store(embeddings)
-    llm = get_llm()
+    llm = get_llm(model=LLM_MODEL, temperature=0)
 
     results = vector_store.similarity_search(args.question, k=args.k)
 

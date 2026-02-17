@@ -1,3 +1,6 @@
 .env
+*.pyc
+__pycache__/
 .venv/
 chroma_db/
+ontologies/

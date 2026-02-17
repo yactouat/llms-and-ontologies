@@ -1,5 +1,16 @@
 # LLMs and ontologies
 
+Demo scripts for getting started with LLMs and knowledge graphs/ontologies.
+
+## what's in this repo
+
+This repository contains two demonstration scripts:
+
+1. **Vector Search (`1_vector_search.py`)** - Shows the limitations of vector search when dealing with complex, multi-hop reasoning or implicit relationships between documents
+2. **Ontology Generation (`2_ontologies_owl.py`)** - Demonstrates how LLMs can extract structured knowledge (concepts, properties, relationships) from documents and generate formal OWL ontologies
+
+These scripts illustrate why structured knowledge representation (ontologies) can complement vector search for knowledge-intensive tasks.
+
 ## get started
 
 1. install [uv](https://docs.astral.sh/uv/) if you haven’t already.
@@ -41,15 +52,17 @@
 
    Get an API key at [Google AI Studio](https://aistudio.google.com/apikey).
 
-## running the vector search script (`1_vector_search.py`)
+## demo scripts
+
+### 1. vector search script (`1_vector_search.py`)
 
 The script vectorizes all PDFs in the `data/` folder (using Gemini embeddings), persists the index in `chroma_db/`, and runs a vector search for a question.
 
-1. **Add PDFs to index**
+**Usage:**
 
-   Put one or more `.pdf` files in the `data/` directory.
+1. Add PDFs to the `data/` directory
 
-2. **Run the script**
+2. Run the script:
 
    ```bash
    uv run python 1_vector_search.py
@@ -62,6 +75,56 @@ The script vectorizes all PDFs in the `data/` folder (using Gemini embeddings), 
    ```
 
    The first run builds and saves the vector DB in `chroma_db/`. Later runs reuse it. To rebuild from scratch, remove the `chroma_db/` directory and run again.
+
+### 2. ontology generation script (`2_ontologies_owl.py`)
+
+The script uses an LLM to analyze a PDF document and automatically generate an OWL ontology (knowledge graph schema) that can be visualized in Protégé.
+
+**What it does:**
+- Extracts text from a PDF document
+- Uses Gemini LLM to identify concepts (classes), properties, and relationships
+- Generates an OWL file in RDF/XML format
+- Creates a human-readable JSON summary
+
+**Usage:**
+
+1. Run the script with the default PDF (`cssanalyse295-en.pdf`):
+
+   ```bash
+   uv run python 2_ontologies_owl.py
+   ```
+
+   Or specify a different PDF:
+
+   ```bash
+   uv run python 2_ontologies_owl.py my_document.pdf
+   ```
+
+2. Optional arguments:
+
+   ```bash
+   # Specify output file name
+   uv run python 2_ontologies_owl.py -o my_ontology.owl
+
+   # Extract only specific pages (0-indexed)
+   uv run python 2_ontologies_owl.py --start-page 0 --end-page 5
+   ```
+
+3. The script generates two files in the `ontologies/` directory:
+   - `<name>.owl` - OWL ontology file (open in Protégé)
+   - `<name>.json` - Human-readable summary
+
+**Viewing the ontology:**
+
+`sudo apt update && sudo apt install default-jre` if you don't have Java Runtime Environment
+
+1. Download [Protégé](https://protege.stanford.edu/) (free ontology editor)
+2. Open the generated `.owl` file in Protégé
+3. Explore the tabs:
+   - **Classes** - View the concept hierarchy
+   - **Object Properties** - See relationships between entities
+   - **Data Properties** - See attributes of entities
+   - **OntoGraf** - Visualize the knowledge graph
 
 ### vector search failing questions (`1_vector_search.py`)
 
@@ -84,3 +147,13 @@ The script vectorizes all PDFs in the `data/` folder (using Gemini embeddings), 
 > **"Do the 'Notice Regarding the Fire' updates from Renesas align with the specific quarterly production decreases reported by Ford in their 2021 filings?"**
 
 *   **Why Vector Search Fails:** Vector search is notoriously bad at temporal alignment. It will pull snippets of dates from both, but won't be able to "join" them to show that the Q2 production dip at Ford matches the 100-day recovery lead time mentioned in Renesas's Update 3.
+
+## when to use what
+
+| Approach | Best For | Limitations |
+|----------|----------|-------------|
+| **Vector Search** | Finding similar content, semantic search, initial document retrieval | Struggles with multi-hop reasoning, implicit relationships, temporal alignment, causal chains |
+| **Ontologies** | Complex reasoning, relationship mapping, domain modeling, inference | Requires upfront schema design, can be rigid, needs expertise to build well |
+| **Hybrid** | Best of both worlds - use vector search for retrieval, ontologies for reasoning | More complex to implement and maintain |
+
+The scripts in this repo demonstrate both approaches so you can understand their strengths and weaknesses.
