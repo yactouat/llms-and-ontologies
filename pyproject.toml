@@ -14,4 +14,5 @@ dependencies = [
     "pypdf>=5.0",
     "python-dotenv>=1.0",
     "owlready2>=0.46",
+    "neo4j>=6.0",
 ]

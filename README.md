@@ -4,12 +4,13 @@ Demo scripts for getting started with LLMs and knowledge graphs/ontologies.
 
 ## what's in this repo
 
-This repository contains four demonstration scripts:
+This repository contains five demonstration scripts:
 
 1. **Vector Search (`1_vector_search.py`)** - Shows the limitations of vector search when dealing with complex, multi-hop reasoning or implicit relationships between documents
 2. **Ontology Schema (`2_ontologies_owl.py`)** - Demonstrates how LLMs can extract ontology schemas (classes, properties, relationships) from documents and generate formal OWL ontologies for use in Protégé
 3. **Knowledge Graph Instances (`3_ontologies_pydantic.py`)** - Shows how to extract concrete entities and their relationships to build a knowledge graph using Pydantic, with easy visualization options
 4. **Knowledge Graph Querying (`4_query_ontology.py`)** - Demonstrates how to query across multiple knowledge graphs to answer complex questions that vector search cannot handle, showing the superiority of structured knowledge representation for multi-hop reasoning
+5. **Neo4j Knowledge Graph Querying (`5_query_ontology_neo4j.py`)** - Shows how to store and query knowledge graphs in a Neo4j graph database for persistent storage, scalability, and advanced graph algorithms
 
 These scripts illustrate why structured knowledge representation (ontologies and knowledge graphs) can complement vector search for knowledge-intensive tasks.
 
@@ -241,6 +242,140 @@ The script demonstrates how to query across multiple knowledge graphs to answer 
 
 **Why it works better than vector search:**
 This script can answer the complex questions listed in the "vector search failing questions" section below because it understands the _relationships_ between entities across documents, not just textual similarity.
+
+### 5. neo4j knowledge graph querying script (`5_query_ontology_neo4j.py`)
+
+The script demonstrates how to use Neo4j graph database to store and query knowledge graphs for persistent storage, scalability, and advanced graph capabilities. It builds on script 4 but stores the knowledge graph in Neo4j instead of keeping it in memory.
+
+**What it does:**
+- Loads all PDF files from the `data/` directory
+- Extracts knowledge graphs from each using LLM (with caching)
+- Stores entities as nodes and relationships as edges in Neo4j
+- Queries the graph using Cypher to get relevant context
+- Uses LLM to interpret the graph context and answer questions
+
+**Key advantages over in-memory graphs (script 4):**
+- **Persistent storage**: graphs survive process restarts and can be reused
+- **Scalability**: handles millions of entities and relationships efficiently
+- **Advanced querying**: leverage Cypher's powerful graph query language
+- **Graph algorithms**: use Neo4j's built-in analytics (shortest path, centrality, PageRank, etc.)
+- **Multi-user access**: multiple processes can query the same graph concurrently
+- **ACID transactions**: ensures data consistency
+- **Visual exploration**: use Neo4j Browser to explore and visualize the graph interactively
+
+**Prerequisites:**
+
+1. Install Docker and docker-compose if not already installed
+2. Start Neo4j database:
+
+   ```bash
+   docker-compose up -d
+   ```
+
+   This starts Neo4j on:
+   - HTTP browser interface: http://localhost:7474
+   - Bolt protocol (Python driver): bolt://localhost:7687
+   - Default credentials: username=`neo4j`, password=`password123`
+
+3. Install the neo4j Python driver (automatically done with `uv sync`):
+
+   ```bash
+   uv sync
+   ```
+
+**Usage:**
+
+1. Start Neo4j (if not already running):
+
+   ```bash
+   docker-compose up -d
+   ```
+
+2. Run the script with a question:
+
+   ```bash
+   uv run python 5_query_ontology_neo4j.py
+   ```
+
+   Or ask a specific question:
+
+   ```bash
+   uv run python 5_query_ontology_neo4j.py "How did the N3 Building fire affect Kentucky Truck Plant inventory?"
+   ```
+
+3. Optional arguments:
+
+   ```bash
+   # Display Neo4j graph statistics before querying
+   uv run python 5_query_ontology_neo4j.py --show-graph "Your question here"
+
+   # Clear Neo4j and rebuild from scratch
+   uv run python 5_query_ontology_neo4j.py --rebuild "Your question here"
+
+   # Rebuild the cache from PDFs
+   uv run python 5_query_ontology_neo4j.py --rebuild-cache "Your question here"
+   ```
+
+4. The script automatically:
+   - Connects to Neo4j
+   - Checks if the graph is already built
+   - Builds the graph from PDFs if needed (using cache when available)
+   - Queries Neo4j for relevant context
+   - Uses LLM to answer the question
+
+**Exploring the graph visually:**
+
+1. Open Neo4j Browser: http://localhost:7474
+2. Connect with:
+   - Username: `neo4j`
+   - Password: `password123`
+3. Run Cypher queries to explore:
+
+   ```cypher
+   // View all entities (limit 50)
+   MATCH (n:Entity) RETURN n LIMIT 50
+
+   // View all relationships (limit 25)
+   MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 25
+
+   // Find specific entities
+   MATCH (n:Entity) WHERE n.label CONTAINS 'Renesas' RETURN n
+
+   // Find paths between entities
+   MATCH path = (a:Entity)-[*1..3]->(b:Entity)
+   WHERE a.label CONTAINS 'fire' AND b.label CONTAINS 'Ford'
+   RETURN path LIMIT 5
+   ```
+
+4. Click on nodes and relationships to explore the graph interactively
+
+**Managing Neo4j:**
+
+```bash
+# Start Neo4j
+docker-compose up -d
+
+# Stop Neo4j
+docker-compose down
+
+# View logs
+docker-compose logs neo4j
+
+# Restart Neo4j
+docker-compose restart neo4j
+
+# Remove Neo4j and all data
+docker-compose down -v
+```
+
+**Why use Neo4j over in-memory graphs:**
+This script demonstrates production-ready knowledge graph storage. Use Neo4j when you need:
+- Graphs that persist across runs
+- Large-scale graphs (millions of nodes/edges)
+- Advanced graph analytics and algorithms
+- Multi-user concurrent access
+- Integration with existing Neo4j infrastructure
+- Visual graph exploration and debugging
 
 ### vector search failing questions (`1_vector_search.py`)
 

@@ -1,0 +1,31 @@
+services:
+  neo4j:
+    image: neo4j:2025.12-community
+    container_name: llm-ontologies-neo4j
+    ports:
+      - "7474:7474"  # HTTP browser interface
+      - "7687:7687"  # Bolt protocol (for Python driver)
+    environment:
+      # Set default password for demo (change for production!)
+      NEO4J_AUTH: neo4j/password123
+      # Disable authentication for easier demo (not recommended for production)
+      # NEO4J_AUTH: none
+      # Enable APOC plugin for advanced graph algorithms (optional)
+      NEO4J_PLUGINS: '["apoc"]'
+      # Increase memory limits for better performance (optional)
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_initial__size: 512M
+      NEO4J_dbms_memory_heap_max__size: 1G
+    volumes:
+      # Persist Neo4j data between container restarts
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - neo4j_import:/var/lib/neo4j/import
+      - neo4j_plugins:/plugins
+    restart: unless-stopped
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  neo4j_import:
+  neo4j_plugins:
