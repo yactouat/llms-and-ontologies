@@ -11,14 +11,14 @@ from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
 COLLECTION_NAME = "renesas_docs"
 
 # Gemini embedding model (stable)
-EMBEDDING_MODEL = "models/embedding-001"
+EMBEDDING_MODEL = "gemini-embedding-001"
 
 # Load .env from project root (optional; env vars can also be set in the shell)
 load_dotenv()
@@ -67,9 +67,10 @@ def get_or_build_vector_store(embeddings: GoogleGenerativeAIEmbeddings) -> Chrom
             f"No PDFs found in {DATA_DIR}. Add .pdf files there and run again."
         )
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
+    splitter = SemanticChunker(
+        embeddings,
+        breakpoint_threshold_type="percentile",
+        breakpoint_threshold_amount=50,
     )
     chunks = splitter.split_documents(raw_docs)
 
