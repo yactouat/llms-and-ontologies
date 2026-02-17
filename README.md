@@ -178,9 +178,7 @@ The script uses an LLM to extract concrete entities and relationships from a PDF
 Method 1: Using Graphviz (recommended for presentations)
 ```bash
 sudo apt install graphviz  # if not already installed
-dot -Tpng knowledge_graphs/my_graph.dot -o my_graph.png
-# Or generate SVG for better quality
-dot -Tsvg knowledge_graphs/my_graph.dot -o my_graph.svg
+dot -Tsvg knowledge_graphs/global_semiconductor_industry_knowledge_graph.dot -o tmp.svg
 ```
 
 Method 2: Online visualization

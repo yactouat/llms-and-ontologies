@@ -23,7 +23,6 @@ from pathlib import Path
 from typing import List
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 
 from utils import get_llm, extract_text_from_pdf
@@ -148,7 +147,7 @@ Guidelines for extraction:
    - Use actual names, organizations, technologies, etc. from the document
    - Capture domain-specific terminology
 
-Your output must be valid JSON matching the KnowledgeGraph schema."""
+Return a structured knowledge graph (entities and relationships)."""
 
 
 def extract_knowledge_graph_with_llm(
@@ -173,13 +172,10 @@ def extract_knowledge_graph_with_llm(
         print(f"  Text truncated to {max_chars} characters for LLM processing")
         text = text[:max_chars] + "\n\n[... truncated ...]"
 
-    # Initialize the LLM with low temperature for consistent extraction
+    # Initialize the LLM with low temperature and bind structured output
     llm = get_llm(temperature=0.0)
+    structured_llm = llm.with_structured_output(KnowledgeGraph)
 
-    # Create a parser that will format the prompt and parse the response
-    parser = PydanticOutputParser(pydantic_object=KnowledgeGraph)
-
-    # Build the prompt with format instructions
     messages = [
         SystemMessage(content=KNOWLEDGE_GRAPH_EXTRACTION_PROMPT),
         HumanMessage(content=f"""Analyze the following document and extract a knowledge graph with entities and relationships.
@@ -187,39 +183,17 @@ def extract_knowledge_graph_with_llm(
 Document text:
 ---
 {text}
----
-
-{parser.get_format_instructions()}
-
-Extract the knowledge graph in the required JSON format:""")
+---""")
     ]
 
-    # Call the LLM to extract the knowledge graph
+    # Invoke the LLM; with_structured_output returns a KnowledgeGraph directly
     print("  Calling LLM to extract knowledge graph...")
-    response = llm.invoke(messages)
-
-    # Extract content from response
-    content = response.content if hasattr(response, "content") else str(response)
-
-    # Handle potential list response format from Gemini
-    if isinstance(content, list):
-        parts = []
-        for block in content:
-            if isinstance(block, dict) and block.get("type") == "text":
-                parts.append(block.get("text", ""))
-            elif isinstance(block, str):
-                parts.append(block)
-        content = "".join(parts)
-
-    # Parse the LLM response into our Pydantic model
     try:
-        kg = parser.parse(content)
+        kg = structured_llm.invoke(messages)
         print(f"  ✓ Extracted {len(kg.entities)} entities and {len(kg.relationships)} relationships")
         return kg
     except Exception as e:
-        print(f"\nERROR: Failed to parse LLM response: {e}")
-        print("\nLLM Response:")
-        print(content)
+        print(f"\nERROR: Failed to extract knowledge graph: {e}")
         raise
 
 
