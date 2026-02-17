@@ -1,0 +1,6 @@
+[project]
+name = "llms-and-ontologies"
+version = "0.1.0"
+description = "LLMs and ontologies"
+readme = "README.md"
+requires-python = ">=3.12"
