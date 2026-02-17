@@ -23,6 +23,11 @@ EMBEDDING_MODEL = "gemini-embedding-001"
 # LLM for final answer (context-only, no internal knowledge)
 LLM_MODEL = "gemini-3-flash-preview"
 
+# DEMO QUESTIONS (Vector Search Failures):
+# 1. "How did the N3 Building fire affect Kentucky Truck Plant inventory?"
+# 2. "Link plating equipment failure to Ford's supplier-related constraints."
+# 3. "Why did 23 machines lost cost billions in revenue?"
+
 # Load .env from project root (optional; env vars can also be set in the shell)
 load_dotenv()
 
