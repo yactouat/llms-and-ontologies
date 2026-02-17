@@ -4,3 +4,12 @@ version = "0.1.0"
 description = "LLMs and ontologies"
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = [
+    "langchain>=0.3",
+    "langchain-chroma>=0.2",
+    "langchain-google-genai>=2.0",
+    "langchain-community>=0.3",
+    "langchain-text-splitters>=0.3",
+    "pypdf>=5.0",
+    "python-dotenv>=1.0",
+]
