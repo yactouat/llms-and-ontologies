@@ -4,12 +4,13 @@ Demo scripts for getting started with LLMs and knowledge graphs/ontologies.
 
 ## what's in this repo
 
-This repository contains two demonstration scripts:
+This repository contains three demonstration scripts:
 
 1. **Vector Search (`1_vector_search.py`)** - Shows the limitations of vector search when dealing with complex, multi-hop reasoning or implicit relationships between documents
-2. **Ontology Generation (`2_ontologies_owl.py`)** - Demonstrates how LLMs can extract structured knowledge (concepts, properties, relationships) from documents and generate formal OWL ontologies
+2. **Ontology Schema (`2_ontologies_owl.py`)** - Demonstrates how LLMs can extract ontology schemas (classes, properties, relationships) from documents and generate formal OWL ontologies for use in Protégé
+3. **Knowledge Graph Instances (`3_ontologies_pydantic.py`)** - Shows how to extract concrete entities and their relationships to build a knowledge graph using Pydantic, with easy visualization options
 
-These scripts illustrate why structured knowledge representation (ontologies) can complement vector search for knowledge-intensive tasks.
+These scripts illustrate why structured knowledge representation (ontologies and knowledge graphs) can complement vector search for knowledge-intensive tasks.
 
 ## get started
 
@@ -125,6 +126,69 @@ The script uses an LLM to analyze a PDF document and automatically generate an O
    - **Object Properties** - See relationships between entities
    - **Data Properties** - See attributes of entities
    - **OntoGraf** - Visualize the knowledge graph
+
+### 3. knowledge graph extraction script (`3_ontologies_pydantic.py`)
+
+The script uses an LLM to extract concrete entities and relationships from a PDF document, creating a knowledge graph that can be easily visualized and understood.
+
+**What it does:**
+- Extracts text from a PDF document
+- Uses Gemini LLM to identify specific entities (people, organizations, technologies, events, etc.)
+- Extracts relationships between entities
+- Generates multiple output formats: JSON and DOT (Graphviz)
+- Provides a human-readable text visualization
+
+**Key difference from script 2:**
+- Script 2 extracts **ontology schema** (what types of things exist and how they can relate)
+- Script 3 extracts **instances** (actual entities and their specific relationships)
+
+**Usage:**
+
+1. Run the script with the default PDF (`cssanalyse295-en.pdf`):
+
+   ```bash
+   uv run python 3_ontologies_pydantic.py
+   ```
+
+   Or specify a different PDF:
+
+   ```bash
+   uv run python 3_ontologies_pydantic.py my_document.pdf
+   ```
+
+2. Optional arguments:
+
+   ```bash
+   # Specify output file name
+   uv run python 3_ontologies_pydantic.py -o my_graph
+
+   # Choose output format (json, dot, or both)
+   uv run python 3_ontologies_pydantic.py --format json
+
+   # Extract only specific pages (0-indexed)
+   uv run python 3_ontologies_pydantic.py --start-page 0 --end-page 5
+   ```
+
+3. The script generates files in the `knowledge_graphs/` directory:
+   - `<name>.json` - Structured JSON representation of entities and relationships
+   - `<name>.dot` - Graphviz DOT file for visualization
+
+**Visualizing the knowledge graph:**
+
+Method 1: Using Graphviz (recommended for presentations)
+```bash
+sudo apt install graphviz  # if not already installed
+dot -Tpng knowledge_graphs/my_graph.dot -o my_graph.png
+# Or generate SVG for better quality
+dot -Tsvg knowledge_graphs/my_graph.dot -o my_graph.svg
+```
+
+Method 2: Online visualization
+1. Open http://www.webgraphviz.com/
+2. Copy and paste the content of the `.dot` file
+3. View the interactive graph visualization
+
+Method 3: Use the text visualization printed to the console during execution
 
 ### vector search failing questions (`1_vector_search.py`)
 
