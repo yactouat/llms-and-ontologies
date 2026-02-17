@@ -10,8 +10,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_experimental.text_splitter import SemanticChunker
+from langchain_core.messages import HumanMessage, SystemMessage
 
 DATA_DIR = Path("data")
 PERSIST_DIR = Path("chroma_db")
@@ -19,6 +20,8 @@ COLLECTION_NAME = "renesas_docs"
 
 # Gemini embedding model (stable)
 EMBEDDING_MODEL = "gemini-embedding-001"
+# LLM for final answer (context-only, no internal knowledge)
+LLM_MODEL = "gemini-3-flash-preview"
 
 # Load .env from project root (optional; env vars can also be set in the shell)
 load_dotenv()
@@ -28,6 +31,49 @@ def get_embeddings() -> GoogleGenerativeAIEmbeddings:
     if not os.environ.get("GOOGLE_API_KEY"):
         raise SystemExit("Set GOOGLE_API_KEY in the environment.")
     return GoogleGenerativeAIEmbeddings(model=EMBEDDING_MODEL)
+
+
+def get_llm() -> ChatGoogleGenerativeAI:
+    if not os.environ.get("GOOGLE_API_KEY"):
+        raise SystemExit("Set GOOGLE_API_KEY in the environment.")
+    return ChatGoogleGenerativeAI(model=LLM_MODEL, temperature=0)
+
+
+CONTEXT_ONLY_SYSTEM = """You must answer the user's question using ONLY the text from the "Retrieved documents" section below. Do not use your internal knowledge or any information outside these documents.
+
+Rules:
+- Base your answer strictly on the provided document excerpts.
+- If the documents do not contain enough information to answer the question, say so clearly (e.g. "The provided documents do not contain information that answers this question.").
+- Do not add facts, interpretations, or details that are not supported by the retrieved text.
+- You may summarize or rephrase only what is in the documents."""
+
+
+def answer_from_documents(question: str, documents: list, llm: ChatGoogleGenerativeAI) -> str:
+    """Formulate a response using only the retrieved document chunks."""
+    context_parts = []
+    for i, doc in enumerate(documents, 1):
+        source = doc.metadata.get("source", "?")
+        context_parts.append(f"[{i}] (source: {source})\n{doc.page_content}")
+    context = "\n\n---\n\n".join(context_parts)
+
+    messages = [
+        SystemMessage(content=CONTEXT_ONLY_SYSTEM),
+        HumanMessage(
+            content=f"Retrieved documents:\n\n{context}\n\n---\n\nQuestion: {question}\n\nAnswer using only the retrieved documents above:"
+        ),
+    ]
+    response = llm.invoke(messages)
+    content = response.content if hasattr(response, "content") else str(response)
+    # Normalize: content may be a list of blocks (e.g. [{"type": "text", "text": "..."}])
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict) and block.get("type") == "text":
+                parts.append(block.get("text", ""))
+            elif isinstance(block, str):
+                parts.append(block)
+        return "".join(parts)
+    return content if isinstance(content, str) else str(content)
 
 
 def load_pdfs(data_dir: Path):
@@ -84,6 +130,11 @@ def get_or_build_vector_store(embeddings: GoogleGenerativeAIEmbeddings) -> Chrom
     return vector_store
 
 
+def _short_source(source: str) -> str:
+    """Show only filename for cleaner demo output."""
+    return Path(source).name if source else "?"
+
+
 def main():
     parser = argparse.ArgumentParser(description="Vector search over PDFs in data/")
     parser.add_argument(
@@ -97,13 +148,43 @@ def main():
 
     embeddings = get_embeddings()
     vector_store = get_or_build_vector_store(embeddings)
+    llm = get_llm()
 
     results = vector_store.similarity_search(args.question, k=args.k)
-    print(f"\nQuestion: {args.question}\n")
-    print("--- Top chunks ---")
+
+    # --- Demo-friendly display ---
+    width = 72
+    line = "═" * width
+    thin = "─" * width
+
+    print()
+    print(line)
+    print("  QUESTION")
+    print(thin)
+    print(f"  {args.question}")
+    print(line)
+    print()
+    print("  TOP CHUNKS (retrieved by similarity)")
+    print(thin)
     for i, doc in enumerate(results, 1):
-        print(f"\n[{i}] (source: {doc.metadata.get('source', '?')})")
-        print(doc.page_content[:500].strip() + ("..." if len(doc.page_content) > 500 else ""))
+        source = doc.metadata.get("source", "?")
+        short = _short_source(source)
+        excerpt = doc.page_content[:500].strip() + ("..." if len(doc.page_content) > 500 else "")
+        print(f"\n  [{i}] {short}")
+        for paragraph in excerpt.split("\n"):
+            print(f"      {paragraph.strip()}")
+    print()
+    print(thin)
+
+    answer = answer_from_documents(args.question, results, llm)
+    print()
+    print("  FINAL RESPONSE (from retrieved documents only)")
+    print(thin)
+    for paragraph in answer.strip().split("\n"):
+        print(f"  {paragraph}")
+    print()
+    print(line)
+    print()
 
 
 if __name__ == "__main__":
